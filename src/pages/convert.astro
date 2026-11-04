@@ -1,36 +1,60 @@
 ---
 import Page from '../layouts/Page.astro';
 import Text from '../components/Text.astro';
+import DownloadMark from '../components/DownloadMark.astro';
+import SettingsButton from '../components/SettingsButton.astro';
 const parentOrigin=import.meta.env.PUBLIC_SITE_ORIGIN||'';
 ---
 <Page titleKey="converterTitle" privatePage={true}>
+  <div class="local-chrome"><SettingsButton controls="options"/></div>
   <main id="workspace" class="workspace" data-state="idle" data-parent-origin={parentOrigin}>
-    <div class="work-controls">
+    <div class="sheet">
       <section id="idle" aria-label="Elegir tu libro" data-i18n-aria-label="fileLabel">
-        <div id="dropzone" class="dropzone">
+        <div id="dropzone" class="dropzone" aria-describedby="file-limits">
+          <DownloadMark/>
           <p class="upload-intro"><Text k="uploadIntro"/></p>
           <input id="pdf" type="file" accept="application/pdf,.pdf" aria-label="Seleccionar archivo PDF" data-i18n-aria-label="fileLabel" tabindex="-1" aria-describedby="file-limits"/>
-          <button id="choose" class="button primary" type="button"><Text k="choose"/></button>
-          <p class="upload-note"><Text k="uploadNote"/></p>
-          <p id="file-limits" class="fine-print"><Text k="limits"/></p>
+          <span class="button-wrap"><button id="choose" class="button primary" type="button" aria-describedby="file-limits"><Text k="choose"/></button></span>
+          <p id="file-limits" class="sr-only"><Text k="limits"/></p>
         </div>
-        <details id="options" class="options"><summary><Text k="settings"/></summary><fieldset id="settings"><legend class="sr-only"><Text k="settingsLabel"/></legend><div class="field-grid"><label><Text k="title"/><input id="title" maxlength="300" placeholder="Use the document’s metadata" data-i18n-placeholder="useDocument"/></label><label><Text k="author"/><input id="author" maxlength="200" placeholder="Use the document’s metadata" data-i18n-placeholder="useDocument"/></label></div><div class="field-grid"><label><Text k="bookLanguage"/><select id="language"><option value="auto" data-i18n="documentLanguage">Use PDF metadata</option><option value="es" data-i18n="spanish">Spanish</option><option value="en" data-i18n="english">English</option><option value="fr" data-i18n="french">French</option><option value="de" data-i18n="german">German</option><option value="pt" data-i18n="portuguese">Portuguese</option><option value="el" data-i18n="greek">Greek</option><option value="ru" data-i18n="russian">Russian</option><option value="ar" data-i18n="arabic">Arabic</option><option value="zh" data-i18n="chinese">Chinese</option><option value="ja" data-i18n="japanese">Japanese</option></select></label><label><Text k="ocrLanguage"/><select id="ocr-language"><option value="spa" data-i18n="spanish">Spanish</option><option value="eng" data-i18n="english">English</option><option value="spa+eng" data-i18n="both">Spanish and English</option></select></label></div><label class="checkbox"><input id="ocr" type="checkbox" checked/> <Text k="enableOcr"/></label><p class="fine-print"><Text k="bookLanguageNote"/></p><p class="fine-print"><Text k="layoutNote"/> <a href="/compatibilidad/" target="_blank" rel="noopener noreferrer"><Text k="viewLimits"/></a>.</p></fieldset></details>
       </section>
       <section id="processing" aria-label="Preparando tu EPUB" data-i18n-aria-label="processing" hidden>
         <h2 id="progress-heading" class="sr-only" tabindex="-1"><Text k="converting"/></h2>
-        <p id="file-name" class="file-name"></p><p id="playful" class="playful" aria-hidden="true"></p>
+        <p id="file-name" class="file-name"></p>
+        <p id="playful" class="playful" aria-hidden="true"></p>
         <div class="progress-labels"><label for="progress" id="stage-label"><Text k="validateStage"/></label><span id="percentage" aria-hidden="true"></span></div>
-        <progress id="progress" aria-describedby="measure"></progress><p id="measure" class="fine-print"></p><p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
+        <progress id="progress" class="sr-only" aria-describedby="measure"></progress>
+        <div class="blocks" id="blocks" aria-hidden="true">{Array.from({length:20},()=><span class="off"></span>)}</div>
+        <p id="measure" class="fine-print"></p>
+        <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
         <button id="cancel" class="text-button" type="button"><Text k="cancel"/></button>
       </section>
       <section id="result" hidden aria-label="Tu EPUB está listo" data-i18n-aria-label="ready">
         <figure id="preview-result" class="book-cover"><img id="thumbnail" alt="Cover of the generated EPUB" data-i18n-alt="coverAlt"/><figcaption><Text k="cover"/></figcaption></figure>
-        <div class="result-copy"><span class="result-kicker"><Text k="nextChapter"/></span><h2 id="result-heading" tabindex="-1"><Text k="ready"/></h2><p id="book-title" class="book-title"></p><p id="result-info" class="fine-print"></p><a id="download" class="button primary" download><Text k="download"/> <span aria-hidden="true">↓</span></a><button id="another" type="button" class="text-button"><Text k="another"/></button>
+        <div class="result-copy">
+          <span class="result-kicker"><Text k="nextChapter"/></span>
+          <h2 id="result-heading" tabindex="-1"><Text k="ready"/></h2>
+          <p id="book-title" class="book-title"></p>
+          <p id="result-info" class="fine-print"></p>
+          <span class="button-wrap"><a id="download" class="button primary" download><Text k="download"/> <span aria-hidden="true">↓</span></a></span>
+          <button id="another" type="button" class="text-button"><Text k="another"/></button>
           <details class="report-details"><summary><Text k="report"/></summary><div id="warnings" class="quality-note"></div><div id="report"></div><button id="download-report" type="button" class="text-button"><Text k="saveReport"/></button></details>
         </div>
       </section>
-      <div id="error" role="alert" class="error" hidden></div><p id="font-notice" class="font-notice" hidden><Text k="fontNotice"/></p><noscript><p><Text k="noScript"/></p></noscript>
+      <div id="error" role="alert" class="error" hidden></div>
+      <p id="font-notice" class="font-notice" hidden><Text k="fontNotice"/></p>
+      <noscript><p><Text k="noScript"/></p></noscript>
     </div>
+    <dialog id="options" class="options-dialog" aria-labelledby="options-title">
+      <div class="dialog-bar"><h2 id="options-title"><Text k="settings"/></h2><button id="close-settings" class="text-button" type="button"><Text k="closeSettings"/></button></div>
+      <fieldset id="settings"><legend class="sr-only"><Text k="settingsLabel"/></legend>
+        <div class="field-grid"><label><Text k="title"/><input id="title" maxlength="300" placeholder="Use the document’s metadata" data-i18n-placeholder="useDocument"/></label><label><Text k="author"/><input id="author" maxlength="200" placeholder="Use the document’s metadata" data-i18n-placeholder="useDocument"/></label></div>
+        <div class="field-grid"><label><Text k="bookLanguage"/><select id="language"><option value="auto" data-i18n="documentLanguage">Use PDF metadata</option><option value="es" data-i18n="spanish">Spanish</option><option value="en" data-i18n="english">English</option><option value="fr" data-i18n="french">French</option><option value="de" data-i18n="german">German</option><option value="pt" data-i18n="portuguese">Portuguese</option><option value="el" data-i18n="greek">Greek</option><option value="ru" data-i18n="russian">Russian</option><option value="ar" data-i18n="arabic">Arabic</option><option value="zh" data-i18n="chinese">Chinese</option><option value="ja" data-i18n="japanese">Japanese</option></select></label><label><Text k="ocrLanguage"/><select id="ocr-language"><option value="spa" data-i18n="spanish">Spanish</option><option value="eng" data-i18n="english">English</option><option value="spa+eng" data-i18n="both">Spanish and English</option></select></label></div>
+        <label class="checkbox"><input id="ocr" type="checkbox" checked/> <Text k="enableOcr"/></label>
+        <p class="fine-print"><Text k="bookLanguageNote"/></p>
+        <p class="fine-print"><Text k="layoutNote"/> <a href="/compatibilidad/" target="_blank" rel="noopener noreferrer"><Text k="viewLimits"/></a>.</p>
+      </fieldset>
+    </dialog>
   </main>
   <script>import '../ui/converter';</script>
 </Page>

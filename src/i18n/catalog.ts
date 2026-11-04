@@ -20,6 +20,7 @@ export const catalog = {
   uploadNote:['A new format for your next read.','El diseño de tus páginas sigue contigo.'],
   limits:['Or drag it here · up to 32 MB and 600 pages','También puedes arrastrarlo aquí · hasta 32 MB y 600 páginas'],
   settings:['Book settings','Opciones del libro'],
+  closeSettings:['Close','Cerrar'],
   settingsLabel:['Book and text recognition settings','Opciones del libro y reconocimiento'],
   title:['Title (optional)','Título (opcional)'],author:['Author (optional)','Autor (opcional)'],
   useDocument:['Use the document’s metadata','Usar el del documento'],

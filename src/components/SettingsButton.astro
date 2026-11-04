@@ -1,0 +1,7 @@
+---
+import Text from './Text.astro';
+import GearIcon from './GearIcon.astro';
+interface Props { controls?: string }
+const { controls } = Astro.props;
+---
+<button type="button" class="icon-button" id="open-settings" aria-haspopup="dialog" aria-expanded="false" aria-controls={controls}><GearIcon/><span class="sr-only"><Text k="settings"/></span></button>

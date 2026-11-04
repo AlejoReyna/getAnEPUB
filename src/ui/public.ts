@@ -2,14 +2,20 @@ import { isLayoutMessage } from './layout';
 import { currentLocale, onLocaleChange } from '../i18n/browser';
 const hero=document.querySelector<HTMLElement>('.hero');
 const paper=document.querySelector<HTMLElement>('.paper-subtitle');
+const fontMissing=()=>{
+  const notice=document.getElementById('font-notice');
+  if(notice)notice.hidden=false;
+  document.documentElement.classList.add('no-ink');
+  hero?.classList.add('no-ink');
+};
+void document.fonts.load('16px "Comic Sans Local"').catch(()=>[]).then(fonts=>{
+  const licensed=[...document.fonts].some(f=>f.family.includes('Comic Sans Licensed'))&&document.fonts.check('16px "Comic Sans Licensed"');
+  if(fonts.length===0&&!licensed)fontMissing();
+});
 if(hero&&paper){
   const measure=()=>paper.style.setProperty('--paper-width',`${paper.getBoundingClientRect().width}px`);
   new ResizeObserver(measure).observe(paper);
   // Without Comic Sans the traced pen strokes do not match the glyphs.
-  void document.fonts.load('16px "Comic Sans Local"').catch(()=>[]).then(fonts=>{
-    const licensed=[...document.fonts].some(f=>f.family.includes('Comic Sans Licensed'))&&document.fonts.check('16px "Comic Sans Licensed"');
-    if(fonts.length===0&&!licensed)hero.classList.add('no-ink');
-  });
   void document.fonts.ready.then(()=>{
     measure();paper.classList.add('paper-ready');
     hero.classList.add('is-drawing');
@@ -21,14 +27,28 @@ if(hero&&paper){
 }
 // Only a small allowlist of fixed layouts crosses the boundary. No file access.
 const frame=document.querySelector<HTMLIFrameElement>('.converter-frame');
+const gear=document.getElementById('open-settings');
 if(frame){
   const converterOrigin=new URL(frame.src,location.href).origin;
   const sendLanguage=()=>frame.contentWindow?.postMessage({type:'get-an-epub:language',locale:currentLocale()},converterOrigin);
   frame.addEventListener('load',sendLanguage);
   onLocaleChange(sendLanguage);
+  let returnFocus=false;
+  gear?.addEventListener('click',()=>{
+    returnFocus=true;
+    gear.setAttribute('aria-expanded','true');
+    frame.contentWindow?.postMessage({type:'get-an-epub:settings',open:true},converterOrigin);
+  });
   window.addEventListener('message',event=>{
     if(event.source!==frame.contentWindow||event.origin!==converterOrigin||!isLayoutMessage(event.data))return;
+    const previous=frame.dataset.layout;
     frame.dataset.layout=event.data.layout;
+    const open=event.data.layout==='options';
+    gear?.setAttribute('aria-expanded',open?'true':'false');
+    if(returnFocus&&previous==='options'&&!open){
+      returnFocus=false;
+      if(event.data.layout==='idle'||event.data.layout==='error')gear?.focus();
+    }
   });
 }
 const slot=document.getElementById('ad-slot');

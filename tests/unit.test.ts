@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { safeLink, clean, xml, filename } from '../src/conversion/safety';
 import { reconstruct } from '../src/conversion/semantic';
 import { shuffledMessages, messages } from '../src/ui/messages';
-import { isLayoutMessage } from '../src/ui/layout';
+import { isLayoutMessage, isSettingsMessage } from '../src/ui/layout';
 import { preferredLocale, isLanguageMessage } from '../src/i18n/browser';
 import { catalog, t, errorMessage, ConversionError } from '../src/i18n/catalog';
 import { englishMessages } from '../src/ui/messages';
@@ -23,7 +23,9 @@ test('sanitizes markup, metadata, filenames, links and bidi controls',()=>{
 test('decorative messages are an exhaustive permutation, never recycled',()=>{const result=shuffledMessages(()=>.3);assert.equal(new Set(result).size,20);assert.deepEqual(new Set(result),new Set(messages));assert.notDeepEqual(result,messages);});
 test('frame layout messages permit fixed presets only, never document data or measured heights',()=>{
  assert.equal(isLayoutMessage({type:'get-an-epub:layout',layout:'result'}),true);
- for(const value of [null,'result',{type:'get-an-epub:layout',layout:'result',filename:'private.pdf'},{type:'get-an-epub:layout',layout:500},{type:'get-an-epub:layout',layout:'<script>'},{type:'other',layout:'result'}])assert.equal(isLayoutMessage(value),false);
+  for(const value of [null,'result',{type:'get-an-epub:layout',layout:'result',filename:'private.pdf'},{type:'get-an-epub:layout',layout:500},{type:'get-an-epub:layout',layout:'<script>'},{type:'other',layout:'result'}])assert.equal(isLayoutMessage(value),false);
+  assert.equal(isSettingsMessage({type:'get-an-epub:settings',open:true}),true);
+  for(const value of [null,{type:'get-an-epub:settings',open:'yes'},{type:'get-an-epub:settings',open:true,title:'private'},{type:'get-an-epub:layout',open:true}])assert.equal(isSettingsMessage(value),false);
 });
 test('manual language wins, regional preferences normalize, and unsupported languages fall back to US English',()=>{
  assert.equal(preferredLocale(['es-MX'],'en-US'),'en-US');

@@ -1,7 +1,7 @@
 import { messages, englishMessages, shuffledIndices } from './messages';
 import { filename } from '../conversion/safety';
 import type { Options, Progress, Report } from '../conversion/contracts';
-import type { Layout } from './layout';
+import { isSettingsMessage, type Layout } from './layout';
 import { currentLocale, isLanguageMessage, onLocaleChange, setLocale } from '../i18n/browser';
 import { t, msg, translate, errorMessage, type Message, type MessageKey } from '../i18n/catalog';
 const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -10,17 +10,48 @@ let busy=false,controller:AbortController|undefined,timer:ReturnType<typeof setI
 let lastAnnouncement='',lastTime=0,lastProgress:Progress|undefined,lastError:Message|undefined,messageIndex:number|undefined,resultBytes=0,canceling=false;
 const clearMessages=()=>{clearInterval(timer);messageIndex=undefined;$('playful').textContent='';};
 function cleanup(){clearMessages();urls.forEach(u=>URL.revokeObjectURL(u));urls=[];$<HTMLAnchorElement>('download').removeAttribute('href');$<HTMLImageElement>('thumbnail').removeAttribute('src');$('report').replaceChildren();report=undefined;lastProgress=undefined;lastError=undefined;}
+if(window.parent!==window){document.documentElement.classList.add('embedded');document.body.classList.add('embedded');}
+else document.documentElement.classList.add('standalone');
 function layout(){
   if(window.parent===window)return;
   const state=$('workspace').dataset.state;
-  const preset:Layout=state==='processing'?'processing':state==='result'?(document.querySelector<HTMLDetailsElement>('.report-details')!.open?'report':'result'):$<HTMLDetailsElement>('options').open?'options':!$('error').hidden?'error':'idle';
+  const optionsOpen=$<HTMLDialogElement>('options').open;
+  const reportOpen=document.querySelector<HTMLDetailsElement>('.report-details')?.open??false;
+  const preset:Layout=optionsOpen?'options':state==='processing'?'processing':state==='result'?(reportOpen?'report':'result'):!$('error').hidden?'error':'idle';
   window.parent.postMessage({type:'get-an-epub:layout',layout:preset},$('workspace').dataset.parentOrigin||location.origin);
 }
-function stage(state:'idle'|'processing'|'result'){for(const id of ['idle','processing','result'])$(id).hidden=state!==id;$('workspace').dataset.state=state;layout();}
+function stage(state:'idle'|'processing'|'result'){
+  for(const id of ['idle','processing','result'])$(id).hidden=state!==id;
+  $('workspace').dataset.state=state;
+  const dialog=$<HTMLDialogElement>('options');
+  if(state!=='idle'&&dialog.open)dialog.close();
+  else layout();
+}
+function paintBlocks(){
+  const bar=$<HTMLProgressElement>('progress');
+  const cells=[...document.querySelectorAll<HTMLElement>('#blocks span')];
+  const indeterminate=!bar.hasAttribute('value')||!(bar.max>0);
+  const filled=indeterminate?0:Math.round((bar.value/bar.max)*cells.length);
+  cells.forEach((cell,index)=>{
+    cell.classList.remove('off','now');
+    if(indeterminate){cell.classList.add(index===0?'now':'off');return;}
+    if(index>=filled)cell.classList.add('off');
+    else if(index===filled-1&&filled<cells.length)cell.classList.add('now');
+  });
+}
+function openSettings(){
+  const dialog=$<HTMLDialogElement>('options');
+  if(!dialog.open)dialog.showModal();
+  document.getElementById('open-settings')?.setAttribute('aria-expanded','true');
+  const title=$<HTMLInputElement>('title');
+  if(title.disabled)$('close-settings').focus();else title.focus();
+  layout();
+}
 function progress(p:Progress){
   lastProgress=p;$('stage-label').textContent=canceling?text('canceling'):translate(currentLocale(),p.detail);
   const bar=$<HTMLProgressElement>('progress');
   if(p.total&&p.current!==undefined){bar.max=p.total;bar.value=p.current;$('percentage').textContent=new Intl.NumberFormat(currentLocale(),{style:'percent',maximumFractionDigits:0}).format(p.current/p.total);$('measure').textContent=p.stage==='ocr'?text('measureOcr'):p.stage==='package'?text('measurePackage'):text(p.total===1?'measurePage':'measurePages',{current:p.current,total:p.total});}else{bar.removeAttribute('value');$('percentage').textContent='';$('measure').textContent=text('indeterminate');}
+  paintBlocks();
   const now=Date.now();if(p.stage!==lastAnnouncement||now-lastTime>5000){$('announcer').textContent=translate(currentLocale(),p.detail);lastAnnouncement=p.stage;lastTime=now;}
 }
 function count(one:MessageKey,many:MessageKey,n:number){return text(n===1?one:many,{count:n});}
@@ -68,7 +99,25 @@ for(const event of ['drop','dragleave'])$('dropzone').addEventListener(event,e=>
 document.addEventListener('dragover',e=>e.preventDefault());document.addEventListener('drop',e=>e.preventDefault());
 window.addEventListener('pagehide',()=>{controller?.abort();cleanup();});
 for(const details of document.querySelectorAll('details'))details.addEventListener('toggle',layout);
-window.addEventListener('message',event=>{if(event.source===window.parent&&event.origin===($('workspace').dataset.parentOrigin||location.origin)&&isLanguageMessage(event.data))setLocale(event.data.locale);});
+const settingsDialog=$<HTMLDialogElement>('options');
+settingsDialog.addEventListener('close',()=>{document.getElementById('open-settings')?.setAttribute('aria-expanded','false');layout();});
+settingsDialog.addEventListener('keydown',event=>{
+  if(event.key!=='Tab'||!settingsDialog.open)return;
+  const focusable=[...settingsDialog.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])')].filter(el=>el.tabIndex!==-1&&el.getClientRects().length>0);
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable[focusable.length-1],active=document.activeElement;
+  if(event.shiftKey&&(active===first||!settingsDialog.contains(active))){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&(active===last||!settingsDialog.contains(active))){event.preventDefault();first.focus();}
+});
+settingsDialog.addEventListener('click',event=>{if(event.target===settingsDialog)settingsDialog.close();});
+$('close-settings').addEventListener('click',()=>settingsDialog.close());
+document.getElementById('open-settings')?.addEventListener('click',()=>openSettings());
+window.addEventListener('message',event=>{
+  const origin=$('workspace').dataset.parentOrigin||location.origin;
+  if(event.source!==window.parent||event.origin!==origin)return;
+  if(isLanguageMessage(event.data))setLocale(event.data.locale);
+  else if(isSettingsMessage(event.data)&&event.data.open)openSettings();
+});
 onLocaleChange(()=>{if(lastProgress&&busy)progress(lastProgress);if(report)renderReport(report);if(lastError&&!$('error').hidden)showError(lastError);renderFunny();layout();});
 layout();
 void document.fonts.load('16px "Comic Sans Local"').catch(()=>[]).then(fonts=>{$('font-notice').hidden=fonts.length>0||document.fonts.check('16px "Comic Sans Licensed"')&&[...document.fonts].some(f=>f.family.includes('Comic Sans Licensed'));});
