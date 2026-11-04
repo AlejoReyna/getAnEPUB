@@ -3,6 +3,7 @@ import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { LocalOcr } from './ocr';
+import { preservePageImage } from './semantic';
 import type { Options, Progress, Result, Metadata, Run, SemanticPage, Asset } from './contracts';
 import { LIMITS } from './contracts';
 import { clean, safeLink, language } from './safety';
@@ -109,7 +110,7 @@ export async function convert(file:File,options:Options,signal:AbortSignal,emit:
         const coords=page.imageCoordinates as ArrayLike<number>|null;let fullImage=false;
         if(coords)for(let i=0;i<coords.length;i+=6){const area=Math.abs((coords[i+2]-coords[i])*(coords[i+5]-coords[i+1])-(coords[i+3]-coords[i+1])*(coords[i+4]-coords[i]));if(area>.65)fullImage=true;}
         const isScan=extractedChars<12||(fullImage&&extractedChars<200);
-        let fromOcr=false;
+        let fromOcr=false,preserveImage=false;
         const ink=raster.data.reduce((sum,v,i)=>sum+(i%4!==3&&v<180?1:0),0);
         if(isScan&&ink>50){
           if(!options.ocr)throw new ConversionError('needsOcr',{page:n});
@@ -120,17 +121,28 @@ export async function convert(file:File,options:Options,signal:AbortSignal,emit:
             await ocr.initialize(options.ocrLanguage);
           }active();
           const recognized=await ocr.recognize(await blobBytes(await toBlob(canvas)));active();
-          if(recognized.data.confidence<65||!recognized.data.text.trim())throw new ConversionError('weakOcr',{page:n});
-          let id=0;
-          runs=(recognized.data.blocks||[]).flatMap(b=>b.paragraphs.flatMap(p=>p.lines.flatMap(l=>l.words.map(w=>({id:id++,text:clean(w.text,1000),x:w.bbox.x0/scale,y:w.bbox.y0/scale,w:(w.bbox.x1-w.bbox.x0)/scale,h:(w.bbox.y1-w.bbox.y0)/scale,size:(w.bbox.y1-w.bbox.y0)/scale,bold:false,dir:'ltr'}))))).filter(r=>r.text.trim());fromOcr=true;
-          if(!runs.length)throw new ConversionError('noOcrBlocks',{page:n});
+          if(!Number.isFinite(recognized.data.confidence)||recognized.data.confidence<65||!recognized.data.text.trim())preserveImage=true;
+          else {
+            let id=0;
+            const ocrRuns=(recognized.data.blocks||[]).flatMap(b=>b.paragraphs.flatMap(p=>p.lines.flatMap(l=>l.words.map(w=>({id:id++,text:clean(w.text,1000),x:w.bbox.x0/scale,y:w.bbox.y0/scale,w:(w.bbox.x1-w.bbox.x0)/scale,h:(w.bbox.y1-w.bbox.y0)/scale,size:(w.bbox.y1-w.bbox.y0)/scale,bold:false,dir:'ltr'}))))).filter(r=>r.text.trim());
+            if(ocrRuns.length){runs=ocrRuns;fromOcr=true;}else preserveImage=true;
+          }
         }
         if(runs.length>LIMITS.runsPerPage)throw new ConversionError('tooManyOcrRuns',{page:n});
         for(const {x,y,w,h,href} of linkTargets)for(const r of runs)if(r.x<x+w&&r.x+r.w>x&&r.y<y+h&&r.y+r.h>y)r.href=href;
         totalChars+=runs.reduce((s,r)=>s+r.text.length,0);if(totalChars>LIMITS.textChars)throw new ConversionError('tooMuchText');
         emit({stage:'reconstruct',detail:msg('reconstructStage',{page:n,total:doc.numPages}),current:n-1,total:doc.numPages});
-        const semantic=await rpc<SemanticPage>('analyze',{number:n,width:view.width,height:view.height,runs,ocr:fromOcr,raster:{width:raster.width,height:raster.height,pixels:raster.data}},[raster.data.buffer]);active();
-        if(fromOcr&&extractedChars>=12)semantic.warnings.push({page:n,code:'partial-ocr',message:msg('partialOcrWarning')});
+        const input={number:n,width:view.width,height:view.height,runs,ocr:fromOcr,raster:{width:raster.width,height:raster.height,pixels:raster.data}};
+        let semantic:SemanticPage;
+        if(preserveImage)semantic=preservePageImage(input);
+        else {
+          try{semantic=await rpc<SemanticPage>('analyze',input,[raster.data.buffer]);}
+          catch(error){
+            if(!(error instanceof ConversionError)||error.key!=='fullPageImage')throw error;
+            semantic=preservePageImage(input);
+          }
+        }active();
+        if(semantic.ocr&&extractedChars>=12)semantic.warnings.push({page:n,code:'partial-ocr',message:msg('partialOcrWarning')});
         if(hasForm)semantic.warnings.push({page:n,code:'forms',message:msg('formsWarning')});
         if(skippedLinks)semantic.warnings.push({page:n,code:'links',message:msg('linksWarning')});
         const assets:Asset[]=[];

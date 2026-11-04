@@ -7,6 +7,17 @@ export function bounds(rs: Box[]): Box {
 }
 const text = (rs:Run[])=> rs.map(r=>r.text).join(' ');
 const overlaps = (a:Box,b:Box)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+// Keep every pixel when OCR or layout reconstruction is unreliable. The book
+// still requires real text elsewhere; a cover must not cancel a readable book.
+export function preservePageImage(page:Pick<PageInput,'number'|'width'|'height'|'runs'>):SemanticPage {
+  return {
+    number:page.number,
+    blocks:[{kind:'image',box:{x:0,y:0,w:page.width,h:page.height},runs:page.runs,imageId:`p${page.number}-region1`,label:msg('pageImageLabel')}],
+    warnings:[{page:page.number,code:'page-image',message:msg('pageImageWarning')}],
+    sourceRuns:page.runs.length,representedRuns:page.runs.length,ocr:false,
+    sourceChars:page.runs.reduce((n,r)=>n+r.text.length,0),
+  };
+}
 function tableBounds(page:PageInput,box:Box):Box{
   const r=page.raster,sx=page.width/r.width,sy=page.height/r.height,rules:Box[]=[];
   for(let y=Math.max(0,Math.floor((box.y-28)/sy));y<Math.min(r.height,Math.ceil((box.y+box.h+22)/sy));y++){
