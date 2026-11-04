@@ -1,0 +1,5 @@
+---
+import { t, type MessageKey } from '../i18n/catalog';
+const { k }=Astro.props as {k:MessageKey};
+---
+<span data-locale="en-US" lang="en-US">{t('en-US',k)}</span><span data-locale="es" lang="es">{t('es',k)}</span>

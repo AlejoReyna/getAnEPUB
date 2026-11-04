@@ -1,0 +1,17 @@
+---
+import { words } from './handwriting-data';
+import { englishWords } from './handwriting-en';
+import Text from './Text.astro';
+const variants=[{locale:'en-US',words:englishWords},{locale:'es',words}];
+---
+<h1 class="hero-title">
+  <span class="sr-only"><Text k="hero"/></span>
+  {variants.map(variant=><span class="locale-title" data-locale={variant.locale} aria-hidden="true">
+    {variant.words.map((word,index)=><svg class="ink-word" viewBox={`0 0 ${word.width} 170`} style={`width:${word.width/160}em`}>
+      <defs><mask id={`ep-ink-${variant.locale}-${index}`} maskUnits="userSpaceOnUse" x="0" y="0" width={word.width} height="170">
+        {word.paths.map(path=><path d={path.d} pathLength="1" style={path.style} class="pen-stroke"/>)}
+      </mask></defs>
+      <text x="12" y="142" mask={`url(#ep-ink-${variant.locale}-${index})`}>{word.text}</text>
+    </svg>)}
+  </span>)}
+</h1>
