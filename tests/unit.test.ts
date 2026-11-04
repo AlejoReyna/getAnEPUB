@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { safeLink, clean, xml, filename } from '../src/conversion/safety';
-import { reconstruct } from '../src/conversion/semantic';
+import { reconstruct, preservePageImage } from '../src/conversion/semantic';
 import { shuffledMessages, messages } from '../src/ui/messages';
 import { isLayoutMessage, isSettingsMessage } from '../src/ui/layout';
 import { preferredLocale, isLanguageMessage } from '../src/i18n/browser';
@@ -61,6 +61,33 @@ test('ad configuration fails closed without host and privacy separation',()=>{
 });
 test('real reflowable package passes internal checks and detects broken links',async()=>{
  const book=new Book({title:'Prueba & acentos',author:'',language:'es',outline:[]},new Uint8Array([1,2,3]));book.add(reconstruct(page([run(1,'Texto real seleccionable.')])),[]);const {bytes,report}=await book.finish();await validateEpub(bytes,1);assert.equal(report.pages,1);await assert.rejects(validateEpub(bytes,2),/pages are missing/);
+});
+test('an illustrated cover keeps its complete page and source coverage',()=>{
+ const input=page([run(1,'Título en la portada')]);
+ const result=preservePageImage(input);
+ assert.equal(result.blocks.length,1);assert.equal(result.blocks[0].kind,'image');
+ assert.deepEqual(result.blocks[0].box,{x:0,y:0,w:612,h:792});
+ assert.deepEqual(result.blocks[0].runs,input.runs);
+ assert.equal(result.sourceRuns,1);assert.equal(result.representedRuns,1);
+ assert.equal(result.sourceChars,input.runs[0].text.length);
+ assert.equal(result.ocr,false);assert.equal(result.warnings[0].code,'page-image');
+ assert.equal(result.warnings[0].message.key,'pageImageWarning');
+});
+test('a cover without OCR text can precede a reflowable chapter without losing a page',async()=>{
+ const book=new Book({title:'Portada ilustrada',author:'',language:'es',outline:[]},new Uint8Array([1,2,3]));
+ const cover=preservePageImage(page([]));
+ book.add(cover,[{id:cover.blocks[0].imageId!,bytes:new Uint8Array([1,2,3])}]);
+ book.add(reconstruct({...page([run(1,'El capítulo sigue siendo texto seleccionable.')]),number:2}),[]);
+ const {bytes,report}=await book.finish();await validateEpub(bytes,2);
+ assert.equal(report.pages,2);assert.equal(report.ocrPages,0);
+ assert.equal(report.coverage[0].imageRegions,1);assert.equal(report.coverage[1].textChars,'El capítulo sigue siendo texto seleccionable.'.length);
+ assert.equal(report.warnings.some(w=>w.page===1&&w.code==='page-image'),true);
+});
+test('image-only output still fails instead of claiming a reflowable conversion',async()=>{
+ const book=new Book({title:'Solo imágenes',author:'',language:'es',outline:[]},new Uint8Array([1,2,3]));
+ const cover=preservePageImage(page([]));
+ book.add(cover,[{id:cover.blocks[0].imageId!,bytes:new Uint8Array([1,2,3])}]);
+ await assert.rejects(book.finish(),(error:unknown)=>error instanceof ConversionError&&error.key==='insufficientText');
 });
 test('long books are one EPUB: the page limit is 600 and the time budget covers them',()=>{
  assert.equal(LIMITS.pages,600);assert.ok(LIMITS.jobMs>=LIMITS.pages*5_000);assert.equal(t('es','limits'),'También puedes arrastrarlo aquí · hasta 32 MB y 600 páginas');
