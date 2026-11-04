@@ -1,8 +1,8 @@
 ---
 import Logo from './Logo.astro';
-import Text from './Text.astro';
+import LanguageSelect from './LanguageSelect.astro';
 ---
 <header class="site-header">
   <a class="brand" href="/" aria-label="Get an Epub, home" data-i18n-aria-label="home"><Logo/><span>Get an Epub</span></a>
-  <label class="language-switch"><span class="sr-only"><Text k="language"/></span><select id="interface-language" data-language-picker aria-label="Interface language" data-i18n-aria-label="language"><option value="en-US" lang="en-US">English (US)</option><option value="es" lang="es">Español</option></select></label>
+  <LanguageSelect/>
 </header>

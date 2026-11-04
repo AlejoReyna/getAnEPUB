@@ -1,9 +1,10 @@
 ---
 import Page from '../layouts/Page.astro';
-import Header from '../components/Header.astro';
 import Text from '../components/Text.astro';
-import Handwriting from '../components/Handwriting.astro';
-import PaperSubtitle from '../components/PaperSubtitle.astro';
+import Symbol from '../components/Symbol.astro';
+import Wordmark from '../components/Wordmark.astro';
+import LanguageSelect from '../components/LanguageSelect.astro';
+import SettingsButton from '../components/SettingsButton.astro';
 import { validateDeployment } from '../../scripts/config.mjs';
 validateDeployment(import.meta.env);
 const converterOrigin=(import.meta.env.PUBLIC_CONVERTER_ORIGIN||'').replace(/\/$/,'');
@@ -11,14 +12,15 @@ const ads=import.meta.env.PUBLIC_ADS_ENABLED==='true';
 ---
 <Page>
   <a class="skip-link" href="#convertir"><Text k="skip"/></a>
-  <div class="app-shell">
-    <Header/>
-    <main class="app-main">
-      <section class="hero" aria-label="Your next read" data-i18n-aria-label="subtitle"><Handwriting/><PaperSubtitle/></section>
-      <section id="convertir" class="converter-shell" aria-label="Private PDF converter" data-i18n-aria-label="converterLabel"><iframe src={`${converterOrigin}/convert/`} title="Choose and convert a PDF privately" data-i18n-title="iframeTitle" class="converter-frame" data-layout="idle" sandbox="allow-scripts allow-same-origin allow-downloads" referrerpolicy="no-referrer" allow="cross-origin-isolated" loading="eager"></iframe></section>
-      {ads&&<aside class="ad-section" aria-label="Advertisement" data-i18n-aria-label="advertising"><span><Text k="advertising"/></span><div id="ad-slot" data-client={import.meta.env.PUBLIC_ADSENSE_CLIENT} data-slot={import.meta.env.PUBLIC_ADSENSE_SLOT} data-adapter={import.meta.env.PUBLIC_CONSENT_ADAPTER}></div></aside>}
-    </main>
-    <footer class="site-footer"><a href="/compatibilidad/"><Text k="compatibility"/></a><a href="/privacidad/"><Text k="privacy"/></a></footer>
-  </div>
+  <div class="topbar"><LanguageSelect/><SettingsButton/></div>
+  <main class="stage">
+    <Symbol/>
+    <h1 class="wordmark-heading"><Wordmark/></h1>
+    <p class="sub"><Text k="subtitle"/></p>
+    <section id="convertir" class="converter-shell" aria-label="Private PDF converter" data-i18n-aria-label="converterLabel"><iframe src={`${converterOrigin}/convert/`} title="Choose and convert a PDF privately" data-i18n-title="iframeTitle" class="converter-frame" data-layout="idle" sandbox="allow-scripts allow-same-origin allow-downloads" referrerpolicy="no-referrer" allow="cross-origin-isolated" loading="eager"></iframe></section>
+    <p id="font-notice" class="font-notice" hidden><Text k="fontNotice"/></p>
+  </main>
+  <footer class="site-footer"><a href="/compatibilidad/"><Text k="compatibility"/></a><a href="/privacidad/"><Text k="privacy"/></a></footer>
+  {ads&&<aside class="ad-section" aria-label="Advertisement" data-i18n-aria-label="advertising"><span><Text k="advertising"/></span><div id="ad-slot" data-client={import.meta.env.PUBLIC_ADSENSE_CLIENT} data-slot={import.meta.env.PUBLIC_ADSENSE_SLOT} data-adapter={import.meta.env.PUBLIC_CONSENT_ADAPTER}></div></aside>}
   <script>import '../ui/public';</script>
 </Page>
