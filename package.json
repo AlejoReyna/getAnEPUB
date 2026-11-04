@@ -1,0 +1,43 @@
+{
+  "name": "folio-pdf-epub",
+  "version": "1.0.0",
+  "description": "Get an Epub — conversión local de PDF a EPUB 3 adaptable",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "start": "npm run dev",
+    "prepare:assets": "node scripts/prepare-assets.mjs",
+    "setup": "node scripts/download-ocr.mjs && npm run prepare:assets",
+    "setup:epubcheck": "node scripts/setup-epubcheck.mjs",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "build": "npm run prepare:assets && ASTRO_TELEMETRY_DISABLED=1 astro build --outDir ./.cache/astro && node scripts/security-headers.mjs",
+    "preview": "node scripts/serve.mjs",
+    "test": "node --import tsx --test tests/unit.test.ts",
+    "test:e2e": "node tests/e2e.mjs",
+    "test:security": "node tests/security.mjs",
+    "test:epubcheck": "node scripts/epubcheck.mjs",
+    "fixtures": "python3 tests/make-fixtures.py",
+    "test:i18n": "node tests/localization.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "astro": "7.4.4",
+    "jszip": "3.10.2",
+    "pdfjs-dist": "6.4.299",
+    "saxes": "6.0.0",
+    "tesseract.js": "7.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@types/node": "26.6.6",
+    "playwright": "1.64.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "private": true
+}

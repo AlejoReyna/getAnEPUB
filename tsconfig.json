@@ -1,0 +1,6 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": { "noUncheckedIndexedAccess": false, "types": ["astro/client", "node"] },
+  "include": [".astro/types.d.ts", "src/**/*", "tests/**/*.ts"],
+  "exclude": ["dist", "build"]
+}

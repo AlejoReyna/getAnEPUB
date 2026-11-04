@@ -1,0 +1,9 @@
+---
+import Text from './Text.astro';
+---
+<div class="paper-subtitle">
+  <p class="paper-measure"><Text k="subtitle"/></p>
+  <div class="paper-strips" aria-hidden="true">
+    {Array.from({length:12},(_,i)=><span class="paper-strip" style={`--i:${i};--dy:${(i%3-1)*14}px;--turn:${i%2?72:-72}deg;--tilt:${(i%3-1)*38}deg;--z:${i%2?16:-12}px`}><span class="paper-copy"><Text k="subtitle"/></span></span>)}
+  </div>
+</div>

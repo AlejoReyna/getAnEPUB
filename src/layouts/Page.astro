@@ -1,0 +1,8 @@
+---
+import '../styles/global.css';
+import { t, type MessageKey } from '../i18n/catalog';
+// AdSense site verification only: this meta tag loads no script and shows no ads.
+const ADSENSE_ACCOUNT='ca-pub-1263839061162940';
+const {titleKey='homeTitle',privatePage=false}=Astro.props as {titleKey?:MessageKey;privatePage?:boolean};
+---
+<!doctype html><html lang="en-US" data-locale="en-US" data-title-key={titleKey}><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="referrer" content="no-referrer"/><script is:inline src="/locale-init.js"></script><meta name="description" content={t('en-US','description')} data-i18n-content="description"/><title>{t('en-US',titleKey)}</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"/>{privatePage?<meta name="robots" content="noindex,nofollow"/>:<meta name="google-adsense-account" content={ADSENSE_ACCOUNT}/>}</head><body class:list={[privatePage&&'private-page']}><slot/><script>import { initializeLocale } from '../i18n/browser';initializeLocale();</script></body></html>
